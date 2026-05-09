@@ -1,9 +1,9 @@
 use axum::Router;
-use axum::routing::get;
-use crate::{health, root};
+use axum::routing::post;
+use crate::api::auth::{login, logout};
 
 pub fn init_router() -> Router {
     Router::new()
-        .route("/", get(root))
-        .route("/health", get(health))
+        .route("/login", post(login))
+        .route("/logout", post(logout))
 }

@@ -4,6 +4,8 @@ use crate::router::init_router;
 mod router;
 mod config;
 mod storage;
+mod service;
+mod api;
 
 pub async fn start_server() {
     let router = init_router();
@@ -20,13 +22,4 @@ pub async fn start_server() {
     axum::serve(listener, router)
         .await
         .expect("server failed unexpectedly");
-}
-
-
-async fn root() -> &'static str {
-    "Hello from kirine-server!"
-}
-
-async fn health() -> &'static str {
-    "ok"
 }
