@@ -1,5 +1,4 @@
 [basic]
-mode = "local"
 data_dir = 'D:\Project\temp\kirine-client\data'
 log_dir = 'D:\Project\temp\kirine-client\logs'
 model_dir = 'D:\Project\temp\kirine-client\models'

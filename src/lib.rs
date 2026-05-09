@@ -1,15 +1,18 @@
-use std::net::SocketAddr;
+use crate::config::init_config;
 use crate::router::init_router;
+use std::net::SocketAddr;
 
-mod router;
-mod config;
-mod storage;
-mod service;
 mod api;
+mod config;
+mod pipeline;
+mod router;
+mod service;
+mod storage;
 
 pub async fn start_server() {
-    let router = init_router();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let env_config = init_config();
+    let addr = SocketAddr::from(([127, 0, 0, 1], env_config.server.port));
+    let router = init_router(env_config);
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .expect("failed to bind 127.0.0.1:3000");
