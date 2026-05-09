@@ -60,21 +60,6 @@ impl Default for ServerConfig {
     }
 }
 
-impl TrainingConfig {
-    pub fn with_hardware_type(mut self, hardware_type: HardwareType) -> Self {
-        self.hardware_type = hardware_type;
-        self
-    }
-
-    pub fn with_attn_implementation(
-        mut self,
-        attn_implementation: AttentionImplementation,
-    ) -> Self {
-        self.attn_implementation = attn_implementation;
-        self
-    }
-}
-
 impl EnvConfig {
     /// 将配置写回到配置文件中
     pub fn flush_env_config(&self) {
