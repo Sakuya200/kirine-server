@@ -1,11 +1,11 @@
 [basic]
-data_dir = '.\data'
-log_dir = '.\logs'
-model_dir = '.\models'
+data_dir = "./data"
+log_dir = "./logs"
+model_dir = "./models"
 
 [server]
 port = 3000
 
 [training]
-hardware_type = "cpu"
+global_device_type = "cuda"
 attn_implementation = "sdpa"

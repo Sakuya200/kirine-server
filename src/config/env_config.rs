@@ -2,6 +2,7 @@ use crate::pipeline::{AttentionImplementation, HardwareType};
 use serde::{Deserialize, Serialize};
 use std::env::current_dir;
 use std::path::PathBuf;
+use crate::utils::config_file_path;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -31,7 +32,7 @@ pub struct ServerConfig {
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case", default)]
 pub struct TrainingConfig {
-    pub hardware_type: HardwareType,
+    pub global_device_type: HardwareType,
     pub attn_implementation: AttentionImplementation,
 }
 
@@ -48,7 +49,7 @@ impl Default for BasicConfig {
 impl Default for TrainingConfig {
     fn default() -> Self {
         Self {
-            hardware_type: HardwareType::default(),
+            global_device_type: HardwareType::default(),
             attn_implementation: AttentionImplementation::default(),
         }
     }
@@ -73,9 +74,8 @@ impl EnvConfig {
     }
 
     pub fn from_config_toml() -> EnvConfig {
-        let toml_path = current_dir()
-            .expect("failed to get current directory")
-            .join("config.toml");
+        let toml_path = config_file_path()
+            .unwrap_or_else(|e| panic!("Failed to read config file at {:?}: {e}", config_file_path()));
         if !toml_path.exists() {
             println!("config file does not exist: {:?}, app will create a new config file", toml_path);
             // 如果文件不存在则创建新文件
@@ -88,6 +88,8 @@ impl EnvConfig {
             .unwrap_or_else(|e| panic!("Failed to parse config file at {:?}: {e}", toml_path))
     }
 
+    pub fn data_dir(&self) -> PathBuf { self.basic.data_dir.clone().into() }
+
     pub fn log_dir(&self) -> PathBuf {
         self.basic.log_dir.clone().into()
     }
@@ -96,8 +98,8 @@ impl EnvConfig {
         self.basic.model_dir.clone().into()
     }
 
-    pub fn hardware_type(&self) -> HardwareType {
-        self.training.hardware_type.clone()
+    pub fn global_device_type(&self) -> HardwareType {
+        self.training.global_device_type.clone()
     }
 
     pub fn attn_implementation(&self) -> AttentionImplementation {
