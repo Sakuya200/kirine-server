@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::env::current_dir;
 use std::path::PathBuf;
 use crate::utils::config_file_path;
+use anyhow::Result;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -63,14 +64,13 @@ impl Default for ServerConfig {
 
 impl EnvConfig {
     /// 将配置写回到配置文件中
-    pub fn flush_env_config(&self) {
-        let toml_path = current_dir()
-            .expect("failed to get current directory")
-            .join("config.toml");
+    pub fn flush_env_config(&self) -> Result<()> {
+        let toml_path = config_file_path()?;
         let toml_str = toml::to_string_pretty(self)
-            .expect("Failed to serialize EnvConfig to TOML string");
+            .map_err(|e| anyhow::anyhow!("Failed to serialize config to TOML string: {e}"))?;;
         std::fs::write(&toml_path, toml_str)
-            .unwrap_or_else(|e| panic!("Failed to write config file at {:?}: {e}", toml_path));
+        .map_err(|e| anyhow::anyhow!("Failed to write config to TOML string: {e}"))?;
+        Ok(())
     }
 
     pub fn from_config_toml() -> EnvConfig {

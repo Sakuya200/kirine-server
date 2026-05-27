@@ -1,6 +1,6 @@
 [basic]
-data_dir = "./data"
-log_dir = "./logs"
+data_dir = "../data"
+log_dir = "../logs"
 model_dir = "./models"
 
 [server]

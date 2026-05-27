@@ -31,6 +31,8 @@ pub fn init_config() -> EnvConfig {
     }
 
     // 将默认值写回配置文件
-    env_config.flush_env_config();
+    if let Err(e) = env_config.flush_env_config() {
+        panic!("Failed to reflush env config to file: {e}");
+    }
     env_config
 }

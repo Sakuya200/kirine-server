@@ -1,4 +1,4 @@
-use std::env::{current_exe};
+use std::env::{current_dir, current_exe};
 use std::fs;
 use std::path::PathBuf;
 use anyhow::{bail, Context, Result};
@@ -6,9 +6,8 @@ use anyhow::{bail, Context, Result};
 const SRC_MODEL_RELATIVE_PATH_LIST: &[&str] = &["./src-model", "./lib/src-model"];
 pub fn root_dir_path() -> Result<PathBuf> {
     Ok(
-        current_exe()?
-            .parent()
-            .expect("failed to get parent directory of executable")
+        current_dir()
+            .context("failed to get current directory")?
             .to_path_buf()
     )
 }
