@@ -1,10 +1,14 @@
 [basic]
-data_dir = "../data"
-log_dir = "../logs"
+data_dir = "./data"
+log_dir = "./logs"
 model_dir = "./models"
 
 [server]
 port = 3000
+db_url = "localhost:5432"
+db_user = "postgres"
+db_password = "123456"
+db_name = "postgres"
 
 [training]
 global_device_type = "cuda"

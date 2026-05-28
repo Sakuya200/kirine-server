@@ -1423,6 +1423,7 @@ dependencies = [
  "axum",
  "calamine",
  "libsqlite3-sys",
+ "log",
  "rand 0.10.1",
  "sea-orm",
  "sea-orm-migration",

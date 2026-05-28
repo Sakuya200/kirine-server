@@ -28,6 +28,10 @@ pub struct BasicConfig {
 #[serde(rename_all = "snake_case", default)]
 pub struct ServerConfig {
     pub port: u16,
+    pub db_url: String,
+    pub db_user: String,
+    pub db_password: String,
+    pub db_name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -58,7 +62,13 @@ impl Default for TrainingConfig {
 
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { port: 3000 }
+        Self {
+            port: 3000,
+            db_url: "localhost:5432".to_string(),
+            db_user: "postgres".to_string(),
+            db_password: "123456".to_string(),
+            db_name: "postgres".to_string(),
+        }
     }
 }
 
