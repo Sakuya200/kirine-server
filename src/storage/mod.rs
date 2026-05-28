@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use sea_orm::{Database, DatabaseConnection};
-use sqlx::Connection;
 use tracing::info;
 use crate::config::EnvConfig;
 
