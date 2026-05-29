@@ -1,9 +1,14 @@
 use crate::pipeline::{AttentionImplementation, HardwareType};
 use serde::{Deserialize, Serialize};
 use std::env::current_dir;
+use std::fs;
 use std::path::PathBuf;
-use crate::utils::config_file_path;
+use crate::utils::{config_file_path, root_dir_path};
 use anyhow::Result;
+use rsa::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
+use rsa::rand_core::OsRng;
+use rsa::{RsaPrivateKey, RsaPublicKey};
+use tracing::{info, warn};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -32,6 +37,8 @@ pub struct ServerConfig {
     pub db_user: String,
     pub db_password: String,
     pub db_name: String,
+    pub token_public_key: String,
+    pub token_private_key: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -68,6 +75,8 @@ impl Default for ServerConfig {
             db_user: "postgres".to_string(),
             db_password: "123456".to_string(),
             db_name: "postgres".to_string(),
+            token_public_key: "".to_string(),
+            token_private_key: "".to_string(),
         }
     }
 }
@@ -114,5 +123,40 @@ impl EnvConfig {
 
     pub fn attn_implementation(&self) -> AttentionImplementation {
         self.training.attn_implementation.clone()
+    }
+
+    pub fn load_token_key(&mut self) {
+        // 从工作目录下的 publickey.pem 和 privatekey.pem 加载；不存在时自动生成。
+        let root = root_dir_path().expect("Failed to get current working directory for JWT keys");
+        let public_key_path = root.join("publickey.pem");
+        let private_key_path = root.join("privatekey.pem");
+
+        if !private_key_path.exists() || !private_key_path.exists() {
+            println!("JWT key files do not exist at {:?} and {:?}, they will be generated automatically", public_key_path, private_key_path);
+            let mut rng = OsRng;
+            let private = RsaPrivateKey::new(&mut rng, 2048)
+                .expect("Failed to generate RSA private key");
+            let public = RsaPublicKey::from(&private);
+
+            let private_pem = private
+                .to_pkcs8_pem(LineEnding::LF)
+                .expect("Failed to encode RSA private key to PEM")
+                .to_string();
+            let public_pem = public
+                .to_public_key_pem(LineEnding::LF)
+                .expect("Failed to encode RSA public key to PEM");
+
+            fs::write(&private_key_path, &private_pem)
+                .unwrap_or_else(|e| panic!("Failed to write private key to {:?}: {e}", private_key_path));
+            fs::write(&public_key_path, &public_pem)
+                .unwrap_or_else(|e| panic!("Failed to write public key to {:?}: {e}", public_key_path));
+            println!("Successfully generated JWT RSA key pair and saved to {:?} and {:?}", public_key_path, private_key_path);
+        }
+
+        let public_key = fs::read_to_string(&public_key_path).ok();
+        let private_key = fs::read_to_string(&private_key_path).ok();
+
+        self.server.token_public_key = public_key.expect("JWT public key failed to load from file");
+        self.server.token_private_key = private_key.expect("JWT private key failed to load from file");
     }
 }

@@ -8,7 +8,10 @@ pub use env_config::EnvConfig;
 pub use log_config::init_log;
 
 pub fn init_config() -> EnvConfig {
-    let env_config = EnvConfig::from_config_toml();
+    let mut env_config = EnvConfig::from_config_toml();
+    // 加载 jwt 公私钥
+    env_config.load_token_key();
+
     // 检查几个配置路径是否存在，如果不存在需要重新创建并警告
     let log_path = env_config.log_dir();
     let model_path = env_config.model_dir();

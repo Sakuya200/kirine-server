@@ -24,6 +24,9 @@ tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter"] }
 walkdir = "2.5.0"
 zip = { version = "8.6.0", features = ["deflate"] }
 log = "0.4.29"
+thiserror = "2.0.18"
+jsonwebtoken = "10.4.0"
+rsa = { version = "0.9.8", features = ["pem"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
