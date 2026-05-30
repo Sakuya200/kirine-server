@@ -55,7 +55,7 @@ impl Default for BasicConfig {
         Self {
             data_dir: "./data".to_string(),
             log_dir: "./logs".to_string(),
-            model_dir: "./models".to_string(),
+            model_dir: "./data_models".to_string(),
         }
     }
 }

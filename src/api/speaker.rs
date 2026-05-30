@@ -1,5 +1,5 @@
 use crate::api::entity::CommonResponse;
-use crate::models::speaker::{
+use crate::data_models::speaker::{
     CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest,
 };
 use crate::service::{AppState, SpeakerService};

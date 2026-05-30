@@ -1,4 +1,4 @@
-use crate::models::speaker::{CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest};
+use crate::data_models::speaker::{CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest};
 use crate::service::AppState;
 use anyhow::Result;
 use async_trait::async_trait;

@@ -1,5 +1,5 @@
 use std::io;
-use crate::models::speaker::{
+use crate::data_models::speaker::{
     CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest,
 };
 use crate::storage::LocalStorage;
@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use anyhow::Result;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, NotSet, QueryFilter, QueryOrder, Set};
 use sea_orm::prelude::Expr;
-use crate::models::{AppLanguage, SpeakerSource, SpeakerStatus};
+use crate::data_models::{AppLanguage, SpeakerSource, SpeakerStatus};
 use crate::storage::entity::speaker;
 use crate::utils::{current_native_time, from_native_to_offset_time};
 
