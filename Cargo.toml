@@ -27,6 +27,8 @@ log = "0.4.29"
 thiserror = "2.0.18"
 jsonwebtoken = "10.4.0"
 rsa = { version = "0.9.8", features = ["pem"] }
+hashbrown = "0.17.1"
+sha2 = "0.10.9"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

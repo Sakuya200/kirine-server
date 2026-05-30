@@ -1,25 +1,16 @@
-use async_trait::async_trait;
 use sea_orm::{Database, DatabaseConnection};
 use tracing::info;
 use crate::config::EnvConfig;
 
 mod entity;
+mod app_meta_info;
 
+pub use app_meta_info::AppMetaStorage;
+pub use app_meta_info::UserCredential;
 
 #[derive(Clone, Debug)]
 pub struct LocalStorage {
     db_conn: DatabaseConnection,
-    storage_impl: StorageImpl
-}
-
-#[async_trait]
-pub trait StorageService {
-
-}
-
-#[derive(Clone, Debug)]
-pub enum StorageImpl {
-    Local(LocalStorageService),
 }
 
 pub async fn init_storage(config: &EnvConfig) -> LocalStorage {
@@ -40,12 +31,5 @@ pub async fn init_storage(config: &EnvConfig) -> LocalStorage {
     info!("successfully connected to database: {}", db_url);
     LocalStorage {
         db_conn: conn,
-        storage_impl: StorageImpl::Local(LocalStorageService {}),
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct LocalStorageService {}
-impl StorageService for LocalStorageService {
-
 }

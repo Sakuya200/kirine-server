@@ -1,8 +1,8 @@
 create table if not exists app_meta
 (
-    key   char       not null
+    key   varchar(20)       not null
         primary key,
-    value varchar(5) not null
+    value varchar(512) not null
 );
 
 alter table app_meta

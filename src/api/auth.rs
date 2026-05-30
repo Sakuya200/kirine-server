@@ -5,7 +5,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use crate::api::entity::CommonResponse;
-use crate::service::AppState;
+use crate::service::{AppState, AuthService};
 use anyhow::Result;
 use axum::{Json, Router};
 use axum::routing::post;
@@ -57,11 +57,13 @@ pub struct LoginRequest {
 }
 
 pub async fn login(State(app_state): State<AppState>, Json(request): Json<LoginRequest>) -> CommonResponse<String> {
-    CommonResponse::success(Some("login".to_string()))
+    let result = app_state.login(request).await;
+    CommonResponse::from_result(result)
 }
 
-pub async fn logout(State(app_state): State<AppState>) -> CommonResponse<String> {
-    CommonResponse::success(Some("logout".to_string()))
+pub async fn logout(State(app_state): State<AppState>) -> CommonResponse<()> {
+    let result = app_state.logout().await;
+    CommonResponse::from_result(result)
 }
 
 pub async fn auth_middleware(
