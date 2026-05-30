@@ -9,6 +9,8 @@ mod speaker_info;
 pub use app_meta_info::AppMetaStorage;
 pub use app_meta_info::UserCredential;
 
+pub use speaker_info::SpeakerInfoStorage;
+
 #[derive(Clone, Debug)]
 pub struct LocalStorage {
     db_conn: DatabaseConnection,
