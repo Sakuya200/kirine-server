@@ -1,6 +1,6 @@
 use axum::Router;
 use axum::routing::post;
-use crate::api::auth::{auth_middleware, login, logout};
+use crate::api::auth::{auth_middleware, AuthApi};
 use crate::config::EnvConfig;
 use crate::service::AppState;
 use crate::storage::LocalStorage;
@@ -16,7 +16,7 @@ pub fn init_router(env_config: EnvConfig, local_storage: LocalStorage) -> Router
 
 pub fn auth_api(app_state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/logout", post(logout))
+        .route("/logout", post(AuthApi::logout))
         .route_layer(axum::middleware::from_fn_with_state(app_state, auth_middleware))
-        .route("/login", post(login))
+        .route("/login", post(AuthApi::login))
 }

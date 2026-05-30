@@ -37,7 +37,9 @@ pub struct ServerConfig {
     pub db_user: String,
     pub db_password: String,
     pub db_name: String,
+    #[serde(skip)]
     pub token_public_key: String,
+    #[serde(skip)]
     pub token_private_key: String,
 }
 

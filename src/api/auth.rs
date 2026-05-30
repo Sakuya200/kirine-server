@@ -1,15 +1,14 @@
+use crate::api::entity::CommonResponse;
+use crate::service::{AppState, AuthService};
+use anyhow::Result;
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::{HeaderMap, Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
+use axum::{Json};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
-use crate::api::entity::CommonResponse;
-use crate::service::{AppState, AuthService};
-use anyhow::Result;
-use axum::{Json, Router};
-use axum::routing::post;
-use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use tracing::error;
 
 #[derive(Clone, Debug)]
@@ -42,28 +41,19 @@ pub enum AuthError {
 impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         let (code, msg) = match self {
-            AuthError::MissingToken | AuthError::InvalidToken => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AuthError::MissingToken | AuthError::InvalidToken => {
+                (StatusCode::UNAUTHORIZED, self.to_string())
+            }
             AuthError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
         };
         CommonResponse::<()>::error(code.as_u16() as i32, msg).into_response()
     }
 }
 
-
 #[derive(Deserialize)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
-}
-
-pub async fn login(State(app_state): State<AppState>, Json(request): Json<LoginRequest>) -> CommonResponse<String> {
-    let result = app_state.login(request).await;
-    CommonResponse::from_result(result)
-}
-
-pub async fn logout(State(app_state): State<AppState>) -> CommonResponse<()> {
-    let result = app_state.logout().await;
-    CommonResponse::from_result(result)
 }
 
 pub async fn auth_middleware(
@@ -73,7 +63,8 @@ pub async fn auth_middleware(
 ) -> Result<Response, AuthError> {
     let token = extract_bearer(req.headers()).ok_or(AuthError::MissingToken)?;
 
-    let claims = state.jwt_validator
+    let claims = state
+        .jwt_validator
         .parse_token(token)
         .map_err(|_| AuthError::InvalidToken)?;
 
@@ -84,13 +75,13 @@ pub async fn auth_middleware(
 }
 
 fn extract_bearer(headers: &HeaderMap) -> Option<&str> {
-    headers.get("Authorization")
+    headers
+        .get("Authorization")
         .and_then(|h| h.to_str().ok())
         .and_then(|s| s.strip_prefix("Bearer ").map(|t| t.trim()))
 }
 
 impl JwtParser {
-
     pub fn parse_token(&self, token: &str) -> Result<Claims> {
         let mut validation = Validation::new(Algorithm::RS256);
         validation.set_issuer(&[self.issuer.as_str()]);
@@ -114,5 +105,22 @@ impl JwtParser {
             audience: "kirine-api".to_string(),
             public_key,
         }
+    }
+}
+
+pub struct AuthApi {}
+
+impl AuthApi {
+    pub async fn login(
+        State(app_state): State<AppState>,
+        Json(request): Json<LoginRequest>,
+    ) -> CommonResponse<String> {
+        let result = app_state.login(request).await;
+        CommonResponse::from_result(result)
+    }
+
+    pub async fn logout(State(app_state): State<AppState>) -> CommonResponse<()> {
+        let result = app_state.logout().await;
+        CommonResponse::from_result(result)
     }
 }

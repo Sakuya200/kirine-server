@@ -1,5 +1,4 @@
-use std::env::{current_dir, current_exe};
-use std::fs;
+use std::env::{current_dir};
 use std::path::PathBuf;
 use anyhow::{bail, Context, Result};
 

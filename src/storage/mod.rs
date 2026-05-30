@@ -4,6 +4,7 @@ use crate::config::EnvConfig;
 
 mod entity;
 mod app_meta_info;
+mod speaker_info;
 
 pub use app_meta_info::AppMetaStorage;
 pub use app_meta_info::UserCredential;

@@ -11,6 +11,7 @@ mod router;
 mod service;
 mod storage;
 mod utils;
+mod models;
 
 pub async fn start_server() {
     let env_config = init_config();

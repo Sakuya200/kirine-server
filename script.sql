@@ -5,9 +5,6 @@ create table if not exists app_meta
     value varchar(512) not null
 );
 
-alter table app_meta
-    owner to postgres;
-
 create table if not exists model_info
 (
     id                               bigserial
@@ -25,9 +22,6 @@ create table if not exists model_info
     downloaded                       boolean     default false                        not null,
     deleted                          smallint    default 0                            not null
 );
-
-alter table model_info
-    owner to postgres;
 
 create index if not exists downloaded_index
     on model_info (downloaded);
@@ -58,9 +52,6 @@ create table if not exists model_training_tasks
     deleted           smallint default 0          not null
 );
 
-alter table model_training_tasks
-    owner to postgres;
-
 create index if not exists model_training_tasks_output_speaker_id_index
     on model_training_tasks (output_speaker_id);
 
@@ -77,9 +68,6 @@ create table if not exists seaql_migrations
     applied_at bigint       not null
 );
 
-alter table seaql_migrations
-    owner to postgres;
-
 create table if not exists speakers
 (
     id             bigserial
@@ -95,9 +83,6 @@ create table if not exists speakers
     modify_time    timestamp                 not null,
     deleted        smallint default 0        not null
 );
-
-alter table speakers
-    owner to postgres;
 
 create index if not exists speakers_base_model_index
     on speakers (base_model);
@@ -123,9 +108,6 @@ create table if not exists task_history
     base_model       varchar(100)                                 not null
 );
 
-alter table task_history
-    owner to postgres;
-
 create index if not exists task_history_base_model_index
     on task_history (base_model);
 
@@ -137,8 +119,7 @@ create index if not exists task_history_modify_time_index
 
 create table if not exists tts_tasks
 (
-    id                bigint   default nextval('tts_task_id_seq'::regclass) not null
-        primary key,
+    id                bigserial    primary key,
     history_id        bigint                                                not null,
     speaker_id        bigint,
     model_path        text,
@@ -155,9 +136,6 @@ create table if not exists tts_tasks
     modify_time       timestamp                                             not null,
     deleted           smallint default 0                                    not null
 );
-
-alter table tts_tasks
-    owner to postgres;
 
 create index if not exists tts_tasks_history_id_index
     on tts_tasks (history_id);
@@ -183,9 +161,6 @@ create table if not exists voice_clone_tasks
     modify_time       timestamp                                    not null,
     deleted           smallint    default 0                        not null
 );
-
-alter table voice_clone_tasks
-    owner to postgres;
 
 create index if not exists voice_clone_tasks_history_id_index
     on voice_clone_tasks (history_id);
