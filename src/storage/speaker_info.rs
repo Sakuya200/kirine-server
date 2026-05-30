@@ -22,7 +22,7 @@ pub trait SpeakerInfoStorage {
     async fn update_speaker_info(
         &self,
         request: UpdateSpeakerRequest,
-    ) -> anyhow::Result<SpeakerInfoResponse>;
+    ) -> Result<SpeakerInfoResponse>;
 
     async fn delete_speaker_info(&self, speaker_id: i64) -> Result<bool>;
 }
