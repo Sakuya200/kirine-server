@@ -1,14 +1,18 @@
 use crate::pipeline::{AttentionImplementation, HardwareType};
-use serde::{Deserialize, Serialize};
-use std::env::current_dir;
-use std::fs;
-use std::path::PathBuf;
 use crate::utils::{config_file_path, root_dir_path};
 use anyhow::Result;
 use rsa::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
 use rsa::rand_core::OsRng;
 use rsa::{RsaPrivateKey, RsaPublicKey};
-use tracing::{info, warn};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default)]
+pub struct Credential {
+    pub username: String,
+    pub password: String,
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -19,6 +23,8 @@ pub struct EnvConfig {
     pub server: ServerConfig,
     #[serde(default)]
     pub training: TrainingConfig,
+    #[serde(default)]
+    pub credential: Credential,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -88,20 +94,26 @@ impl EnvConfig {
     pub fn flush_env_config(&self) -> Result<()> {
         let toml_path = config_file_path()?;
         let toml_str = toml::to_string_pretty(self)
-            .map_err(|e| anyhow::anyhow!("Failed to serialize config to TOML string: {e}"))?;;
+            .map_err(|e| anyhow::anyhow!("Failed to serialize config to TOML string: {e}"))?;
         std::fs::write(&toml_path, toml_str)
-        .map_err(|e| anyhow::anyhow!("Failed to write config to TOML string: {e}"))?;
+            .map_err(|e| anyhow::anyhow!("Failed to write config to TOML string: {e}"))?;
         Ok(())
     }
 
     pub fn from_config_toml() -> EnvConfig {
-        let toml_path = config_file_path()
-            .unwrap_or_else(|e| panic!("Failed to read config file at {:?}: {e}", config_file_path()));
+        let toml_path = config_file_path().unwrap_or_else(|e| {
+            panic!(
+                "Failed to read config file at {:?}: {e}",
+                config_file_path()
+            )
+        });
         if !toml_path.exists() {
-            println!("config file does not exist: {:?}, app will create a new config file", toml_path);
+            println!(
+                "config file does not exist: {:?}, app will create a new config file",
+                toml_path
+            );
             // 如果文件不存在则创建新文件
-            std::fs::File::create(&toml_path)
-                .expect("failed to create config.toml");
+            std::fs::File::create(&toml_path).expect("failed to create config.toml");
         }
         let toml_str = std::fs::read_to_string(&toml_path)
             .unwrap_or_else(|e| panic!("Failed to read config file at {:?}: {e}", toml_path));
@@ -109,7 +121,9 @@ impl EnvConfig {
             .unwrap_or_else(|e| panic!("Failed to parse config file at {:?}: {e}", toml_path))
     }
 
-    pub fn data_dir(&self) -> PathBuf { self.basic.data_dir.clone().into() }
+    pub fn data_dir(&self) -> PathBuf {
+        self.basic.data_dir.clone().into()
+    }
 
     pub fn log_dir(&self) -> PathBuf {
         self.basic.log_dir.clone().into()
@@ -134,10 +148,13 @@ impl EnvConfig {
         let private_key_path = root.join("privatekey.pem");
 
         if !private_key_path.exists() || !private_key_path.exists() {
-            println!("JWT key files do not exist at {:?} and {:?}, they will be generated automatically", public_key_path, private_key_path);
+            println!(
+                "JWT key files do not exist at {:?} and {:?}, they will be generated automatically",
+                public_key_path, private_key_path
+            );
             let mut rng = OsRng;
-            let private = RsaPrivateKey::new(&mut rng, 2048)
-                .expect("Failed to generate RSA private key");
+            let private =
+                RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate RSA private key");
             let public = RsaPublicKey::from(&private);
 
             let private_pem = private
@@ -148,17 +165,23 @@ impl EnvConfig {
                 .to_public_key_pem(LineEnding::LF)
                 .expect("Failed to encode RSA public key to PEM");
 
-            fs::write(&private_key_path, &private_pem)
-                .unwrap_or_else(|e| panic!("Failed to write private key to {:?}: {e}", private_key_path));
-            fs::write(&public_key_path, &public_pem)
-                .unwrap_or_else(|e| panic!("Failed to write public key to {:?}: {e}", public_key_path));
-            println!("Successfully generated JWT RSA key pair and saved to {:?} and {:?}", public_key_path, private_key_path);
+            fs::write(&private_key_path, &private_pem).unwrap_or_else(|e| {
+                panic!("Failed to write private key to {:?}: {e}", private_key_path)
+            });
+            fs::write(&public_key_path, &public_pem).unwrap_or_else(|e| {
+                panic!("Failed to write public key to {:?}: {e}", public_key_path)
+            });
+            println!(
+                "Successfully generated JWT RSA key pair and saved to {:?} and {:?}",
+                public_key_path, private_key_path
+            );
         }
 
         let public_key = fs::read_to_string(&public_key_path).ok();
         let private_key = fs::read_to_string(&private_key_path).ok();
 
         self.server.token_public_key = public_key.expect("JWT public key failed to load from file");
-        self.server.token_private_key = private_key.expect("JWT private key failed to load from file");
+        self.server.token_private_key =
+            private_key.expect("JWT private key failed to load from file");
     }
 }

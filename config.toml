@@ -13,3 +13,7 @@ db_name = "postgres"
 [training]
 global_device_type = "cuda"
 attn_implementation = "sdpa"
+
+[credential]
+username = "admin"
+password = "admin"

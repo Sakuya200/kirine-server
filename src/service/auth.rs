@@ -21,7 +21,7 @@ impl AuthService for AppState {
     async fn login(&self, request: LoginRequest) -> Result<String> {
         let storage = self.storage.clone();
         let user_credential = storage.get_app_user_credential().await?;
-        let input_password_hash = encode_password(request.password);
+        let input_password_hash = encode_password(&request.password);
         if request.username != user_credential.username
             || !input_password_hash.eq(&user_credential.password_hash) {
             bail!("用户名或密码错误");
@@ -34,7 +34,7 @@ impl AuthService for AppState {
     }
 }
 
-fn encode_password(password: String) -> String {
+fn encode_password(password: &str) -> String {
     // Keep hash format stable for value stored in app_meta.admin_password.
     let mut hasher = Sha256::new();
     hasher.update(password.as_bytes());
