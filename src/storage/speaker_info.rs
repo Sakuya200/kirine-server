@@ -1,15 +1,16 @@
-use std::io;
 use crate::data_models::speaker::{
     CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest,
 };
-use crate::storage::LocalStorage;
-use async_trait::async_trait;
-use anyhow::Result;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, NotSet, QueryFilter, QueryOrder, Set};
-use sea_orm::prelude::Expr;
 use crate::data_models::{AppLanguage, SpeakerSource, SpeakerStatus};
-use crate::storage::entity::speaker;
+use crate::storage::LocalStorage;
+use crate::storage::entity::{model_info, speaker};
 use crate::utils::{current_native_time, from_native_to_offset_time};
+use anyhow::{Result, bail};
+use async_trait::async_trait;
+use sea_orm::prelude::Expr;
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, NotSet, QueryFilter, QueryOrder, Set};
+use std::io;
+use std::path::PathBuf;
 
 #[async_trait]
 pub trait SpeakerInfoStorage {
@@ -35,7 +36,10 @@ pub trait SpeakerInfoStorage {
 
 #[async_trait]
 impl SpeakerInfoStorage for LocalStorage {
-    async fn create_speaker_info(&self, request: CreateSpeakerRequest) -> Result<SpeakerInfoResponse> {
+    async fn create_speaker_info(
+        &self,
+        request: CreateSpeakerRequest,
+    ) -> Result<SpeakerInfoResponse> {
         let create_time = current_native_time();
         let languages = if request.languages.is_empty() {
             vec![AppLanguage::Chinese]
@@ -60,14 +64,75 @@ impl SpeakerInfoStorage for LocalStorage {
             create_time: Set(create_time.clone()),
             modify_time: Set(create_time.clone()),
             deleted: Set(0),
-        }.insert(&self.db_conn)
+        }
+        .insert(&self.db_conn)
         .await?;
 
         map_speaker_model(inserted)
     }
 
-    async fn import_model_as_speaker(&self, request: ImportModelAsSpeakerRequest) -> Result<SpeakerInfoResponse> {
-        todo!()
+    async fn import_model_as_speaker(
+        &self,
+        request: ImportModelAsSpeakerRequest,
+    ) -> Result<SpeakerInfoResponse> {
+        let create_time = current_native_time();
+        let name = request.name.trim();
+        let description = request.description.trim();
+        let base_model = request.base_model.trim();
+        let model_version = request.model_version.trim();
+        let source_model_dir = PathBuf::from(request.source_model_dir_path.trim());
+
+        if name.is_empty() {
+            bail!("说话人名称不能为空");
+        }
+        if description.is_empty() {
+            bail!("说话人描述不能为空");
+        }
+        if base_model.is_empty() {
+            bail!("基础模型类型不能为空");
+        }
+        if model_version.is_empty() {
+            bail!("模型版本不能为空");
+        }
+        if !source_model_dir.is_dir() {
+            bail!("模型目录不存在或不是目录: {}", source_model_dir.display());
+        }
+
+        // Keep import behavior consistent with client local mode: model type/version must be supported.
+        model_info::Entity::find()
+            .filter(model_info::Column::Deleted.eq(0))
+            .filter(model_info::Column::BaseModel.eq(base_model))
+            .filter(model_info::Column::ModelVersion.eq(model_version))
+            .one(&self.db_conn)
+            .await?
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!(
+                        "当前服务不支持该模型类型或版本: {} {}",
+                        base_model, model_version
+                    ),
+                )
+            })?;
+
+        let languages_json = serde_json::to_string(&vec![request.language])?;
+        let inserted = speaker::ActiveModel {
+            id: NotSet,
+            name: Set(name.to_string()),
+            languages_json: Set(languages_json),
+            samples: Set(0),
+            base_model: Set(base_model.to_string()),
+            description: Set(description.to_string()),
+            status: Set(SpeakerStatus::Ready.as_str().to_string()),
+            source: Set(SpeakerSource::Local.as_str().to_string()),
+            create_time: Set(create_time),
+            modify_time: Set(create_time),
+            deleted: Set(0),
+        }
+        .insert(&self.db_conn)
+        .await?;
+
+        map_speaker_model(inserted)
     }
 
     async fn list_speaker_infos(&self) -> Result<Vec<SpeakerInfoResponse>> {
@@ -82,7 +147,10 @@ impl SpeakerInfoStorage for LocalStorage {
             .collect()
     }
 
-    async fn update_speaker_info(&self, request: UpdateSpeakerRequest) -> Result<SpeakerInfoResponse> {
+    async fn update_speaker_info(
+        &self,
+        request: UpdateSpeakerRequest,
+    ) -> Result<SpeakerInfoResponse> {
         let modify_time = current_native_time();
         let speaker = speaker::Entity::find_by_id(request.id)
             .filter(speaker::Column::Deleted.eq(0))
@@ -112,7 +180,6 @@ impl SpeakerInfoStorage for LocalStorage {
         Ok(result.rows_affected > 0)
     }
 }
-
 
 fn map_speaker_model(model: speaker::Model) -> Result<SpeakerInfoResponse> {
     let languages = serde_json::from_str::<Vec<AppLanguage>>(&model.languages_json)?;
