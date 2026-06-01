@@ -1,45 +1,40 @@
-use crate::data_models::speaker::{
-    CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest,
+use crate::data_model::common::AppLanguage;
+use crate::data_model::speaker::dto::{
+    CreateSpeakerDto, ImportModelAsSpeakerDto, UpdateSpeakerDto,
 };
-use crate::data_models::{AppLanguage, SpeakerSource, SpeakerStatus};
+use crate::data_model::speaker::types::{SpeakerDeletedState, SpeakerSource, SpeakerStatus};
 use crate::storage::LocalStorage;
 use crate::storage::entity::{model_info, speaker};
-use crate::utils::{current_native_time, from_native_to_offset_time};
-use anyhow::{Result, bail};
+use crate::utils::current_native_time;
+use anyhow::Result;
 use async_trait::async_trait;
 use sea_orm::prelude::Expr;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, NotSet, QueryFilter, QueryOrder, Set};
 use std::io;
-use std::path::PathBuf;
 
 #[async_trait]
 pub trait SpeakerInfoStorage {
-    async fn create_speaker_info(
-        &self,
-        request: CreateSpeakerRequest,
-    ) -> Result<SpeakerInfoResponse>;
+    async fn create_speaker_info(&self, request: CreateSpeakerDto) -> Result<speaker::Model>;
 
     async fn import_model_as_speaker(
         &self,
-        request: ImportModelAsSpeakerRequest,
-    ) -> Result<SpeakerInfoResponse>;
+        request: ImportModelAsSpeakerDto,
+    ) -> Result<speaker::Model>;
 
-    async fn list_speaker_infos(&self) -> Result<Vec<SpeakerInfoResponse>>;
+    async fn list_speaker_entities(&self) -> Result<Vec<speaker::Model>>;
 
-    async fn update_speaker_info(
+    async fn update_speaker_info(&self, request: UpdateSpeakerDto) -> Result<speaker::Model>;
+
+    async fn update_speaker_deleted_state(
         &self,
-        request: UpdateSpeakerRequest,
-    ) -> Result<SpeakerInfoResponse>;
-
-    async fn delete_speaker_info(&self, speaker_id: i64) -> Result<bool>;
+        speaker_id: i64,
+        state: SpeakerDeletedState,
+    ) -> Result<bool>;
 }
 
 #[async_trait]
 impl SpeakerInfoStorage for LocalStorage {
-    async fn create_speaker_info(
-        &self,
-        request: CreateSpeakerRequest,
-    ) -> Result<SpeakerInfoResponse> {
+    async fn create_speaker_info(&self, request: CreateSpeakerDto) -> Result<speaker::Model> {
         let create_time = current_native_time();
         let languages = if request.languages.is_empty() {
             vec![AppLanguage::Chinese]
@@ -52,7 +47,7 @@ impl SpeakerInfoStorage for LocalStorage {
         let status = request.status;
         let source = request.source;
 
-        let inserted = speaker::ActiveModel {
+        speaker::ActiveModel {
             id: NotSet,
             name: Set(name.to_string()),
             languages_json: Set(languages_json),
@@ -66,39 +61,20 @@ impl SpeakerInfoStorage for LocalStorage {
             deleted: Set(0),
         }
         .insert(&self.db_conn)
-        .await?;
-
-        map_speaker_model(inserted)
+        .await
+        .map_err(Into::into)
     }
 
     async fn import_model_as_speaker(
         &self,
-        request: ImportModelAsSpeakerRequest,
-    ) -> Result<SpeakerInfoResponse> {
+        request: ImportModelAsSpeakerDto,
+    ) -> Result<speaker::Model> {
         let create_time = current_native_time();
         let name = request.name.trim();
         let description = request.description.trim();
         let base_model = request.base_model.trim();
         let model_version = request.model_version.trim();
-        let source_model_dir = PathBuf::from(request.source_model_dir_path.trim());
 
-        if name.is_empty() {
-            bail!("说话人名称不能为空");
-        }
-        if description.is_empty() {
-            bail!("说话人描述不能为空");
-        }
-        if base_model.is_empty() {
-            bail!("基础模型类型不能为空");
-        }
-        if model_version.is_empty() {
-            bail!("模型版本不能为空");
-        }
-        if !source_model_dir.is_dir() {
-            bail!("模型目录不存在或不是目录: {}", source_model_dir.display());
-        }
-
-        // Keep import behavior consistent with client local mode: model type/version must be supported.
         model_info::Entity::find()
             .filter(model_info::Column::Deleted.eq(0))
             .filter(model_info::Column::BaseModel.eq(base_model))
@@ -116,7 +92,7 @@ impl SpeakerInfoStorage for LocalStorage {
             })?;
 
         let languages_json = serde_json::to_string(&vec![request.language])?;
-        let inserted = speaker::ActiveModel {
+        speaker::ActiveModel {
             id: NotSet,
             name: Set(name.to_string()),
             languages_json: Set(languages_json),
@@ -130,27 +106,21 @@ impl SpeakerInfoStorage for LocalStorage {
             deleted: Set(0),
         }
         .insert(&self.db_conn)
-        .await?;
-
-        map_speaker_model(inserted)
+        .await
+        .map_err(Into::into)
     }
 
-    async fn list_speaker_infos(&self) -> Result<Vec<SpeakerInfoResponse>> {
+    async fn list_speaker_entities(&self) -> Result<Vec<speaker::Model>> {
         speaker::Entity::find()
             .filter(speaker::Column::Deleted.eq(0))
             .order_by_desc(speaker::Column::ModifyTime)
             .order_by_desc(speaker::Column::CreateTime)
             .all(&self.db_conn)
-            .await?
-            .into_iter()
-            .map(map_speaker_model)
-            .collect()
+            .await
+            .map_err(Into::into)
     }
 
-    async fn update_speaker_info(
-        &self,
-        request: UpdateSpeakerRequest,
-    ) -> Result<SpeakerInfoResponse> {
+    async fn update_speaker_info(&self, request: UpdateSpeakerDto) -> Result<speaker::Model> {
         let modify_time = current_native_time();
         let speaker = speaker::Entity::find_by_id(request.id)
             .filter(speaker::Column::Deleted.eq(0))
@@ -163,42 +133,26 @@ impl SpeakerInfoStorage for LocalStorage {
         active_model.description = Set(request.description.trim().to_string());
         active_model.modify_time = Set(modify_time);
 
-        let updated = active_model.update(&self.db_conn).await?;
-        map_speaker_model(updated)
+        active_model.update(&self.db_conn).await.map_err(Into::into)
     }
 
-    async fn delete_speaker_info(&self, speaker_id: i64) -> Result<bool> {
+    async fn update_speaker_deleted_state(
+        &self,
+        speaker_id: i64,
+        state: SpeakerDeletedState,
+    ) -> Result<bool> {
         let modify_time = current_native_time();
         let result = speaker::Entity::update_many()
-            .col_expr(speaker::Column::Deleted, Expr::value(1))
+            .col_expr(
+                speaker::Column::Deleted,
+                Expr::value(state.as_deleted_flag()),
+            )
             .col_expr(speaker::Column::ModifyTime, Expr::value(modify_time))
             .filter(speaker::Column::Id.eq(speaker_id))
-            .filter(speaker::Column::Deleted.eq(0))
+            .filter(speaker::Column::Deleted.eq(state.expected_current_flag()))
             .exec(&self.db_conn)
             .await?;
 
         Ok(result.rows_affected > 0)
     }
-}
-
-fn map_speaker_model(model: speaker::Model) -> Result<SpeakerInfoResponse> {
-    let languages = serde_json::from_str::<Vec<AppLanguage>>(&model.languages_json)?;
-    Ok(SpeakerInfoResponse {
-        id: model.id,
-        name: model.name,
-        languages,
-        samples: model.samples as u32,
-        base_model: model.base_model,
-        create_time: from_native_to_offset_time(model.create_time),
-        modify_time: from_native_to_offset_time(model.modify_time),
-        description: model.description,
-        status: model
-            .status
-            .parse::<SpeakerStatus>()
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?,
-        source: model
-            .source
-            .parse::<SpeakerSource>()
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?,
-    })
 }

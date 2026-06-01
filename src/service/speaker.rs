@@ -1,8 +1,21 @@
-use crate::data_models::speaker::{CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest};
+use crate::data_model::speaker::dto::{
+    CreateSpeakerDto, ImportModelAsSpeakerDto, UpdateSpeakerDto,
+};
+use crate::data_model::speaker::req::{
+    CreateSpeakerRequest, ImportModelAsSpeakerRequest, UpdateSpeakerRequest,
+};
+use crate::data_model::speaker::resp::SpeakerInfoResponse;
+use crate::data_model::common::AppLanguage;
+use crate::data_model::speaker::types::{
+    SpeakerDeletedState, SpeakerSource, SpeakerStatus,
+};
 use crate::service::AppState;
-use anyhow::Result;
+use crate::storage::{SpeakerInfoStorage, speaker_entity as speaker};
+use crate::utils::from_native_to_offset_time;
+use anyhow::{Result, bail};
 use async_trait::async_trait;
-use crate::storage::SpeakerInfoStorage;
+use std::io;
+use std::path::PathBuf;
 
 #[async_trait]
 pub trait SpeakerService {
@@ -32,28 +45,105 @@ impl SpeakerService for AppState {
         &self,
         request: CreateSpeakerRequest,
     ) -> Result<SpeakerInfoResponse> {
-        self.storage.create_speaker_info(request).await
+        let row = self
+            .storage
+            .create_speaker_info(CreateSpeakerDto {
+                name: request.name,
+                languages: request.languages,
+                samples: request.samples,
+                base_model: request.base_model,
+                description: request.description,
+                status: request.status,
+                source: request.source,
+            })
+            .await?;
+        map_speaker_entity(row)
     }
 
     async fn import_model_as_speaker(
         &self,
         request: ImportModelAsSpeakerRequest,
     ) -> Result<SpeakerInfoResponse> {
-        self.storage.import_model_as_speaker(request).await
+        let name = request.name.trim();
+        let description = request.description.trim();
+        let base_model = request.base_model.trim();
+        let model_version = request.model_version.trim();
+        let source_model_dir = PathBuf::from(request.source_model_dir_path.trim());
+
+        if name.is_empty() {
+            bail!("说话人名称不能为空");
+        }
+        if description.is_empty() {
+            bail!("说话人描述不能为空");
+        }
+        if base_model.is_empty() {
+            bail!("基础模型类型不能为空");
+        }
+        if model_version.is_empty() {
+            bail!("模型版本不能为空");
+        }
+        if !source_model_dir.is_dir() {
+            bail!("模型目录不存在或不是目录: {}", source_model_dir.display());
+        }
+
+        let row = self
+            .storage
+            .import_model_as_speaker(ImportModelAsSpeakerDto {
+                base_model: request.base_model,
+                model_version: request.model_version,
+                name: request.name,
+                description: request.description,
+                language: request.language,
+            })
+            .await?;
+        map_speaker_entity(row)
     }
 
     async fn list_speaker_infos(&self) -> Result<Vec<SpeakerInfoResponse>> {
-        self.storage.list_speaker_infos().await
+        let rows = self.storage.list_speaker_entities().await?;
+        rows.into_iter().map(map_speaker_entity).collect()
     }
 
     async fn update_speaker_info(
         &self,
         request: UpdateSpeakerRequest,
     ) -> Result<SpeakerInfoResponse> {
-        self.storage.update_speaker_info(request).await
+        let row = self
+            .storage
+            .update_speaker_info(UpdateSpeakerDto {
+                id: request.id,
+                name: request.name,
+                description: request.description,
+            })
+            .await?;
+        map_speaker_entity(row)
     }
 
     async fn delete_speaker_info(&self, speaker_id: i64) -> Result<bool> {
-        self.storage.delete_speaker_info(speaker_id).await
+        self.storage
+            .update_speaker_deleted_state(speaker_id, SpeakerDeletedState::Deleted)
+            .await
     }
+}
+
+fn map_speaker_entity(model: speaker::Model) -> Result<SpeakerInfoResponse> {
+    let languages = serde_json::from_str::<Vec<AppLanguage>>(&model.languages_json)?;
+    Ok(SpeakerInfoResponse {
+        id: model.id,
+        name: model.name,
+        languages,
+        samples: model.samples as u32,
+        base_model: model.base_model,
+        create_time: from_native_to_offset_time(model.create_time),
+        modify_time: from_native_to_offset_time(model.modify_time),
+        description: model.description,
+        status: model
+            .status
+            .parse::<SpeakerStatus>()
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?,
+        source: model
+            .source
+            .parse::<SpeakerSource>()
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?,
+    })
 }

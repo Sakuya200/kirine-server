@@ -1,7 +1,8 @@
 use crate::api::entity::CommonResponse;
-use crate::data_models::speaker::{
-    CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerInfoResponse, UpdateSpeakerRequest,
+use crate::data_model::speaker::req::{
+    CreateSpeakerRequest, ImportModelAsSpeakerRequest, UpdateSpeakerRequest,
 };
+use crate::data_model::speaker::resp::SpeakerInfoResponse;
 use crate::service::{AppState, SpeakerService};
 use axum::extract::{Path, State};
 use axum::Json;

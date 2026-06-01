@@ -7,12 +7,12 @@ use crate::storage::{init_storage, AppMetaStorage, UserCredential};
 
 mod api;
 mod config;
+mod data_model;
 mod pipeline;
 mod router;
 mod service;
 mod storage;
 mod utils;
-mod data_models;
 
 pub async fn start_server() {
     let env_config = init_config();

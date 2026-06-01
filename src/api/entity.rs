@@ -61,6 +61,7 @@ fn map_error_code(error: &anyhow::Error) -> i32 {
             io::ErrorKind::PermissionDenied => 403,
             io::ErrorKind::NotFound => 404,
             io::ErrorKind::AlreadyExists => 409,
+            io::ErrorKind::Unsupported => 501,
             _ => 500,
         };
     }
