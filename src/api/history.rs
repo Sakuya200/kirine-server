@@ -1,10 +1,6 @@
-use axum::Json;
 use axum::extract::{Path, State};
 
 use crate::api::entity::CommonResponse;
-use crate::data_model::history::req::{
-    CreateModelTrainingTaskRequest, CreateTextToSpeechTaskRequest, CreateVoiceCloneTaskRequest,
-};
 use crate::data_model::history::resp::HistoryRecordResponse;
 use crate::service::{AppState, HistoryService};
 

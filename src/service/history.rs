@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use serde_json::Value;
 use std::io;
 
-use crate::api::history;
 use crate::data_model::common::TextToSpeechFormat;
 use crate::data_model::history::dto::{
     CreateModelTrainingTaskDto, CreateTextToSpeechTaskDto, CreateVoiceCloneTaskDto,

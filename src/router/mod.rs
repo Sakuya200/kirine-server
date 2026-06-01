@@ -47,6 +47,7 @@ pub fn speaker_api(app_state: AppState) -> Router<AppState> {
 
 pub fn model_api(app_state: AppState) -> Router<AppState> {
     Router::new()
+        .route("/get-history-audio", post(HistoryApi::get_history_audio))
         .route("/list", post(ModelInfoApi::list_model_infos))
         .route("/detail/{model_id}", post(ModelInfoApi::get_model_info))
         .route("/device_type", post(ModelInfoApi::get_device_type))
