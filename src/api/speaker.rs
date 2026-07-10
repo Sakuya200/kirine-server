@@ -1,10 +1,11 @@
 use crate::api::entity::CommonResponse;
 use crate::data_model::speaker::req::{
-    CreateSpeakerRequest, ImportModelAsSpeakerRequest, UpdateSpeakerRequest,
+    CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerListFilter, UpdateSpeakerRequest,
 };
 use crate::data_model::speaker::resp::SpeakerInfoResponse;
+use crate::api::entity::{PageRequest, PageResponse};
 use crate::service::{AppState, SpeakerService};
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
 
 pub struct SpeakerApi {}
@@ -26,8 +27,9 @@ impl SpeakerApi {
 
     pub async fn list_speaker_infos(
         State(app_state): State<AppState>,
-    ) -> CommonResponse<Vec<SpeakerInfoResponse>> {
-        CommonResponse::from_result(app_state.list_speaker_infos().await)
+        Query(request): Query<PageRequest<SpeakerListFilter>>,
+    ) -> CommonResponse<PageResponse<SpeakerInfoResponse>> {
+        CommonResponse::from_result(app_state.list_speaker_infos(request).await)
     }
 
     pub async fn update_speaker_info(

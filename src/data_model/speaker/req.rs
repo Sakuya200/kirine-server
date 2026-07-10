@@ -1,4 +1,3 @@
-use crate::data_model::common::AppLanguage;
 use crate::data_model::speaker::types::{SpeakerSource, SpeakerStatus};
 use crate::pipeline::BaseModel;
 use serde::Deserialize;
@@ -6,8 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateSpeakerRequest {
-    pub name: String,
-    pub languages: Vec<AppLanguage>,
+    pub speaker_name: String,
     pub samples: u32,
     pub base_model: BaseModel,
     pub description: String,
@@ -19,7 +17,7 @@ pub struct CreateSpeakerRequest {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSpeakerRequest {
     pub id: i64,
-    pub name: String,
+    pub speaker_name: String,
     pub description: String,
 }
 
@@ -31,5 +29,11 @@ pub struct ImportModelAsSpeakerRequest {
     pub source_model_dir_path: String,
     pub name: String,
     pub description: String,
-    pub language: AppLanguage,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeakerListFilter {
+    pub keyword: Option<String>,
+    pub status: Option<SpeakerStatus>,
 }

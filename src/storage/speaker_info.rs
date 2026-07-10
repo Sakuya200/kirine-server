@@ -1,4 +1,3 @@
-use crate::data_model::common::AppLanguage;
 use crate::data_model::speaker::dto::{
     CreateSpeakerDto, ImportModelAsSpeakerDto, UpdateSpeakerDto,
 };
@@ -36,12 +35,6 @@ pub trait SpeakerInfoStorage {
 impl SpeakerInfoStorage for LocalStorage {
     async fn create_speaker_info(&self, request: CreateSpeakerDto) -> Result<speaker::Model> {
         let create_time = current_native_time();
-        let languages = if request.languages.is_empty() {
-            vec![AppLanguage::Chinese]
-        } else {
-            request.languages
-        };
-        let languages_json = serde_json::to_string(&languages)?;
         let name = request.name.trim();
         let description = request.description.trim();
         let status = request.status;
@@ -50,7 +43,6 @@ impl SpeakerInfoStorage for LocalStorage {
         speaker::ActiveModel {
             id: NotSet,
             name: Set(name.to_string()),
-            languages_json: Set(languages_json),
             samples: Set(request.samples as i64),
             base_model: Set(request.base_model.as_str().to_string()),
             description: Set(description.to_string()),
@@ -91,11 +83,9 @@ impl SpeakerInfoStorage for LocalStorage {
                 )
             })?;
 
-        let languages_json = serde_json::to_string(&vec![request.language])?;
         speaker::ActiveModel {
             id: NotSet,
             name: Set(name.to_string()),
-            languages_json: Set(languages_json),
             samples: Set(0),
             base_model: Set(base_model.to_string()),
             description: Set(description.to_string()),

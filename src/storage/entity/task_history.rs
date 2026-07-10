@@ -16,7 +16,6 @@ pub struct Model {
     pub finished_time: Option<DateTime>,
     pub device: String,
     pub deleted: i16,
-    pub base_model: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

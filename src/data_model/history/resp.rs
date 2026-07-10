@@ -90,3 +90,63 @@ pub struct HistoryRecordResponse {
     pub task_log: Option<String>,
     pub detail: Value,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryRecordSummaryResponse {
+    pub id: i64,
+    pub task_type: HistoryTaskType,
+    pub title: String,
+    pub speaker: String,
+    pub status: TaskStatus,
+    pub duration_seconds: i64,
+    pub device: HardwareType,
+    pub create_time: OffsetDateTime,
+    pub modify_time: OffsetDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TextToSpeechAudioAsset {
+    pub task_id: i64,
+    pub file_name: String,
+    pub content_type: String,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceCloneAudioAsset {
+    pub task_id: i64,
+    pub file_name: String,
+    pub content_type: String,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceDesignAudioAsset {
+    pub task_id: i64,
+    pub file_name: String,
+    pub content_type: String,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceDesignTaskResult {
+    pub task_id: i64,
+    pub file_name: String,
+    pub base_model: BaseModel,
+    pub model_version: String,
+    pub language: AppLanguage,
+    pub format: TextToSpeechFormat,
+    pub export_audio_name: String,
+    pub duration_seconds: i64,
+    pub prompt: String,
+    pub text: String,
+    pub model_params: Value,
+    pub created_at: OffsetDateTime,
+    pub status: TaskStatus,
+    pub output_file_path: String,
+}

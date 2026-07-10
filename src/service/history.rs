@@ -9,13 +9,17 @@ use crate::data_model::history::dto::{
 };
 use crate::data_model::history::req::{
     CreateModelTrainingTaskRequest, CreateTextToSpeechTaskRequest, CreateVoiceCloneTaskRequest,
+    CreateVoiceDesignTaskRequest, HistoryListFilter,
 };
 use crate::data_model::history::resp::{
-    HistoryRecordResponse, ModelTrainingSampleInput, ModelTrainingTaskDetail,
-    TextToSpeechTaskDetail, VoiceCloneTaskDetail,
+    HistoryRecordResponse, HistoryRecordSummaryResponse,
+    ModelTrainingSampleInput, ModelTrainingTaskDetail, TextToSpeechAudioAsset,
+    TextToSpeechTaskDetail, VoiceCloneAudioAsset, VoiceCloneTaskDetail, VoiceDesignAudioAsset,
+    VoiceDesignTaskResult,
 };
 use crate::data_model::history::types::{HistoryRecordStateMutation, HistoryTaskType, TaskStatus};
 use crate::pipeline::HardwareType;
+use crate::api::entity::{PageRequest, PageResponse};
 use crate::service::AppState;
 use crate::storage::{HistoryDetailEntity, HistoryRecordEntity, HistoryStorage};
 use crate::utils::from_native_to_offset_time;
@@ -34,10 +38,23 @@ pub trait HistoryService {
         &self,
         request: CreateVoiceCloneTaskRequest,
     ) -> Result<HistoryRecordResponse>;
-    async fn get_history_audio(&self, history_id: i64) -> Result<String>;
-    async fn list_history_records(&self) -> Result<Vec<HistoryRecordResponse>>;
+    async fn create_voice_design_task(
+        &self,
+        request: CreateVoiceDesignTaskRequest,
+    ) -> Result<VoiceDesignTaskResult>;
+    async fn read_text_to_speech_audio(&self, history_id: i64) -> Result<TextToSpeechAudioAsset>;
+    async fn read_voice_clone_audio(&self, history_id: i64) -> Result<VoiceCloneAudioAsset>;
+    async fn read_voice_design_audio(&self, history_id: i64) -> Result<VoiceDesignAudioAsset>;
+    async fn list_history_records(
+        &self,
+        request: PageRequest<HistoryListFilter>,
+    ) -> Result<PageResponse<HistoryRecordSummaryResponse>>;
     async fn get_history_record(&self, history_id: i64) -> Result<HistoryRecordResponse>;
-    async fn delete_history_record(&self, history_id: i64) -> Result<bool>;
+    async fn delete_history_record(
+        &self,
+        history_id: i64,
+        task_type: crate::data_model::history::types::HistoryTaskType,
+    ) -> Result<bool>;
     async fn cancel_history_task(&self, history_id: i64) -> Result<bool>;
 }
 
@@ -138,20 +155,119 @@ impl HistoryService for AppState {
         map_history_record_entity(row)
     }
 
-    async fn get_history_audio(&self, history_id: i64) -> Result<String> {
+    async fn create_voice_design_task(
+        &self,
+        request: CreateVoiceDesignTaskRequest,
+    ) -> Result<VoiceDesignTaskResult> {
+        let CreateVoiceDesignTaskRequest {
+            title,
+            speaker_name,
+            base_model,
+            model_version,
+            language,
+            format,
+            export_audio_name,
+            prompt,
+            text,
+            model_params,
+            device,
+        } = request;
+        let _ = (
+            title,
+            speaker_name,
+            base_model,
+            model_version,
+            language,
+            format,
+            export_audio_name,
+            prompt,
+            text,
+            model_params,
+            device,
+        );
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "声音设计任务暂未接入执行流水线，仅保留接口占位",
+        )
+        .into())
+    }
+
+    async fn read_text_to_speech_audio(&self, history_id: i64) -> Result<TextToSpeechAudioAsset> {
         let history = self.storage.get_history_record_entity(history_id).await?;
         match history.detail {
-            HistoryDetailEntity::TextToSpeech(row) => Ok(row.output_file_path.unwrap_or_default()),
-            HistoryDetailEntity::VoiceClone(row) => Ok(row.output_file_path.unwrap_or_default()),
-            HistoryDetailEntity::ModelTraining(_) => {
-                Err(io::Error::new(io::ErrorKind::InvalidInput, "模型训练任务没有音频输出").into())
-            }
+            HistoryDetailEntity::TextToSpeech(row) => Ok(TextToSpeechAudioAsset {
+                task_id: history_id,
+                file_name: row.output_file_path.clone().unwrap_or(row.export_audio_name),
+                content_type: "audio/wav".to_string(),
+                bytes: Vec::new(),
+            }),
+            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "任务类型不是文本转语音").into()),
         }
     }
 
-    async fn list_history_records(&self) -> Result<Vec<HistoryRecordResponse>> {
-        let rows = self.storage.list_history_record_entities().await?;
-        rows.into_iter().map(map_history_record_entity).collect()
+    async fn read_voice_clone_audio(&self, history_id: i64) -> Result<VoiceCloneAudioAsset> {
+        let history = self.storage.get_history_record_entity(history_id).await?;
+        match history.detail {
+            HistoryDetailEntity::VoiceClone(row) => Ok(VoiceCloneAudioAsset {
+                task_id: history_id,
+                file_name: row.output_file_path.clone().unwrap_or(row.export_audio_name),
+                content_type: "audio/wav".to_string(),
+                bytes: Vec::new(),
+            }),
+            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "任务类型不是声音克隆").into()),
+        }
+    }
+
+    async fn read_voice_design_audio(&self, history_id: i64) -> Result<VoiceDesignAudioAsset> {
+        let _ = history_id;
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "声音设计音频暂未接入执行流水线，仅保留接口占位",
+        )
+        .into())
+    }
+
+    async fn list_history_records(
+        &self,
+        request: PageRequest<HistoryListFilter>,
+    ) -> Result<PageResponse<HistoryRecordSummaryResponse>> {
+        let PageRequest {
+            page,
+            page_size,
+            filter,
+        } = request;
+
+        let mut rows = self.storage.list_history_record_entities().await?;
+        if let Some(keyword) = filter.keyword.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+            rows.retain(|record| {
+                record.history.title.contains(keyword) || record.history.speaker_name.contains(keyword)
+            });
+        }
+        if let Some(task_type) = filter.task_type {
+            rows.retain(|record| match parse_history_task_type(&record.history.task_type) {
+                Ok(value) => value == task_type,
+                Err(_) => false,
+            });
+        }
+        if let Some(status) = filter.status {
+            rows.retain(|record| match parse_task_status(&record.history.status) {
+                Ok(value) => value == status,
+                Err(_) => false,
+            });
+        }
+
+        let total = rows.len() as u64;
+        let page = page.max(1);
+        let page_size = page_size.max(1);
+        let start = ((page - 1) * page_size) as usize;
+        let items = rows
+            .into_iter()
+            .skip(start)
+            .take(page_size as usize)
+            .map(map_history_record_summary_entity)
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(PageResponse::new(total, page, page_size, items))
     }
 
     async fn get_history_record(&self, history_id: i64) -> Result<HistoryRecordResponse> {
@@ -159,7 +275,16 @@ impl HistoryService for AppState {
         map_history_record_entity(row)
     }
 
-    async fn delete_history_record(&self, history_id: i64) -> Result<bool> {
+    async fn delete_history_record(
+        &self,
+        history_id: i64,
+        task_type: crate::data_model::history::types::HistoryTaskType,
+    ) -> Result<bool> {
+        let current = self.storage.get_history_record_entity(history_id).await?;
+        let current_task_type = parse_history_task_type(&current.history.task_type)?;
+        if current_task_type != task_type {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "任务类型与历史记录不匹配").into());
+        }
         self.storage
             .mutate_history_record_state(history_id, HistoryRecordStateMutation::SoftDelete)
             .await
@@ -186,6 +311,21 @@ fn map_history_record_entity(record: HistoryRecordEntity) -> Result<HistoryRecor
         modify_time: from_native_to_offset_time(row.modify_time),
         task_log: None,
         detail: map_history_detail_entity(record.detail)?,
+    })
+}
+
+fn map_history_record_summary_entity(record: HistoryRecordEntity) -> Result<HistoryRecordSummaryResponse> {
+    let row = record.history;
+    Ok(HistoryRecordSummaryResponse {
+        id: row.id,
+        task_type: parse_history_task_type(&row.task_type)?,
+        title: row.title,
+        speaker: row.speaker_name,
+        status: parse_task_status(&row.status)?,
+        duration_seconds: row.duration_seconds,
+        device: parse_hardware_type(&row.device)?,
+        create_time: from_native_to_offset_time(row.create_time),
+        modify_time: from_native_to_offset_time(row.modify_time),
     })
 }
 

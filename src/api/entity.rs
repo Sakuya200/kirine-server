@@ -93,3 +93,59 @@ impl<T: Serialize> IntoResponse for CommonResponse<T> {
             .unwrap()
     }
 }
+
+/// 分页请求结构体
+/// page: 页码
+/// page_size: 每页条数
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageRequest<T> {
+    #[serde(default = "default_page")]
+    pub page: u32,
+    #[serde(default = "default_page_size")]
+    pub page_size: u32,
+    #[serde(flatten)]
+    pub filter: T,
+}
+
+/// 分页响应结构体
+/// total: 总条数
+/// page: 当前页码
+/// page_size: 每页条数
+/// total_pages: 总页数
+/// items: 当前页数据
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageResponse<T> {
+    pub total: u64,
+    pub page: u32,
+    pub page_size: u32,
+    pub total_pages: u32,
+    pub items: Vec<T>,
+}
+
+fn default_page() -> u32 {
+    1
+}
+
+fn default_page_size() -> u32 {
+    10
+}
+
+impl<T> PageResponse<T> {
+    pub fn new(total: u64, page: u32, page_size: u32, items: Vec<T>) -> Self {
+        let total_pages = if total == 0 {
+            0
+        } else {
+            ((total + page_size as u64 - 1) / page_size as u64) as u32
+        };
+
+        Self {
+            total,
+            page,
+            page_size,
+            total_pages,
+            items,
+        }
+    }
+}

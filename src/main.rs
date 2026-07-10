@@ -4,5 +4,3 @@ use kirine_server::start_server;
 async fn main() {
     start_server().await;
 }
-
-

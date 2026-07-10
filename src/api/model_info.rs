@@ -1,8 +1,8 @@
-use axum::extract::{Path, State};
-use axum::Json;
+use axum::extract::{Path, Query, State};
 
 use crate::api::entity::CommonResponse;
-use crate::data_model::model_info::req::GetDeviceTypeRequest;
+use crate::api::entity::{PageRequest, PageResponse};
+use crate::data_model::model_info::req::{GetDeviceTypeRequest, InstallModelQuery, ModelListFilter};
 use crate::data_model::model_info::resp::{ModelInfoResponse, ModelMutationResult};
 use crate::pipeline::HardwareType;
 use crate::service::{AppState, ModelInfoService};
@@ -12,13 +12,14 @@ pub struct ModelInfoApi;
 impl ModelInfoApi {
     pub async fn list_model_infos(
         State(app_state): State<AppState>,
-    ) -> CommonResponse<Vec<ModelInfoResponse>> {
-        CommonResponse::from_result(app_state.list_model_infos().await)
+        Query(request): Query<PageRequest<ModelListFilter>>,
+    ) -> CommonResponse<PageResponse<ModelInfoResponse>> {
+        CommonResponse::from_result(app_state.list_model_infos(request).await)
     }
 
     pub async fn get_device_type(
         State(app_state): State<AppState>,
-        Json(request): Json<GetDeviceTypeRequest>,
+        Query(request): Query<GetDeviceTypeRequest>,
     ) -> CommonResponse<HardwareType> {
         CommonResponse::from_result(
             app_state
@@ -29,9 +30,10 @@ impl ModelInfoApi {
 
     pub async fn install_model(
         State(app_state): State<AppState>,
-        Path((model_id, device)): Path<(i64, HardwareType)>,
+        Path(model_id): Path<i64>,
+        Query(query): Query<InstallModelQuery>,
     ) -> CommonResponse<ModelMutationResult> {
-        CommonResponse::from_result(app_state.install_model(model_id, device).await)
+        CommonResponse::from_result(app_state.install_model(model_id, query.device).await)
     }
 
     pub async fn uninstall_model(

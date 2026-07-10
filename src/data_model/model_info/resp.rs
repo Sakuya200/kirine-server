@@ -1,3 +1,4 @@
+use crate::data_model::common::AppLanguage;
 use crate::data_model::model_info::types::ModelDownloadType;
 use crate::pipeline::{BaseModel, HardwareType};
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,7 @@ pub struct ModelInfoResponse {
     pub required_model_repo_id_list: Vec<String>,
     pub supported_feature_list: Vec<String>,
     pub supported_devices: Vec<HardwareType>,
+    pub supported_languages: Vec<AppLanguage>,
     pub downloaded: bool,
     pub create_time: OffsetDateTime,
     pub modify_time: OffsetDateTime,

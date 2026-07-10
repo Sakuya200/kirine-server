@@ -73,7 +73,6 @@ impl HistoryStorage for LocalStorage {
             finished_time: Set(None),
             device: Set(request.device.as_str().to_string()),
             deleted: Set(0),
-            base_model: Set(request.base_model.clone()),
         }
         .insert(&txn)
         .await?;
@@ -128,7 +127,6 @@ impl HistoryStorage for LocalStorage {
             finished_time: Set(None),
             device: Set(request.device.as_str().to_string()),
             deleted: Set(0),
-            base_model: Set(request.base_model.clone()),
         }
         .insert(&txn)
         .await?;
@@ -182,7 +180,6 @@ impl HistoryStorage for LocalStorage {
             finished_time: Set(None),
             device: Set(request.device.as_str().to_string()),
             deleted: Set(0),
-            base_model: Set(request.base_model.clone()),
         }
         .insert(&txn)
         .await?;
