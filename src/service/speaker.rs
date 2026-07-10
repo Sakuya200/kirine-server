@@ -1,3 +1,4 @@
+use crate::api::entity::{PageRequest, PageResponse};
 use crate::data_model::speaker::dto::{
     CreateSpeakerDto, ImportModelAsSpeakerDto, UpdateSpeakerDto,
 };
@@ -5,10 +6,7 @@ use crate::data_model::speaker::req::{
     CreateSpeakerRequest, ImportModelAsSpeakerRequest, SpeakerListFilter, UpdateSpeakerRequest,
 };
 use crate::data_model::speaker::resp::SpeakerInfoResponse;
-use crate::api::entity::{PageRequest, PageResponse};
-use crate::data_model::speaker::types::{
-    SpeakerDeletedState, SpeakerSource, SpeakerStatus,
-};
+use crate::data_model::speaker::types::{SpeakerDeletedState, SpeakerSource, SpeakerStatus};
 use crate::service::AppState;
 use crate::storage::{SpeakerInfoStorage, speaker_entity as speaker};
 use crate::utils::from_native_to_offset_time;
@@ -111,7 +109,12 @@ impl SpeakerService for AppState {
         } = request;
 
         let mut rows = self.storage.list_speaker_entities().await?;
-        if let Some(keyword) = filter.keyword.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        if let Some(keyword) = filter
+            .keyword
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
             rows.retain(|row| row.name.contains(keyword) || row.description.contains(keyword));
         }
         if let Some(status) = filter.status {
